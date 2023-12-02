@@ -29,6 +29,10 @@ from langchain.schema import SystemMessage
 from langchain.agents import AgentType, initialize_agent
 from langchain.chat_models import ChatOpenAI
 
+from langchain.chains.conversation.memory import ConversationBufferWindowMemory
+from langchain.prompts import MessagesPlaceholder
+
+
 import time
 import json
 
@@ -49,7 +53,6 @@ robot_full_pose = {"step_1":{   "left_ee_coor"           : [0.5,0.3,0.5],
 
 #global var to store the item dict
 item_dict_global = None
-
 
 
 
@@ -408,7 +411,7 @@ class GptController(Node):
         #---------------langchain and openai setup---------------------
 
         #creating the system message for the agent llm 
-        system_message = SystemMessage(content="You are controlling a bimanual robot. Use the tools provided to sovle the users problem. To solve the users problem start by breaking the task into smaller steps that you can solve using a single tool call for each step")
+        system_message_agent = SystemMessage(content="You are controlling a bimanual robot. Use the tools provided to sovle the users problem or task. To solve the users problem start by breaking the task into smaller steps that you can solve using a single tool call for each step")
 
         #defining the model to ofe with the llm
         llm = ChatOpenAI(model="gpt-3.5-turbo-1106", temperature=0)
@@ -423,7 +426,25 @@ class GptController(Node):
                  #GetGraspPoseTool(),
                  GraspObjectTool()]
         #finaly defining the agent llm 
-        agent = initialize_agent(tools, llm, agent=AgentType.OPENAI_FUNCTIONS, verbose=True ,system_message=system_message)
+
+        agent_kwargs = {
+            "system_message": system_message_agent,
+            "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
+        }
+
+        conversational_memory = ConversationBufferWindowMemory(
+            memory_key='memory',
+            k=5,
+            return_messages=True
+        )
+
+
+        agent = initialize_agent(tools = tools, 
+                                 llm = llm, 
+                                 agent=AgentType.OPENAI_FUNCTIONS, 
+                                 verbose=True, 
+                                 agent_kwargs=agent_kwargs, 
+                                 memory = conversational_memory )
         
         
         #-----------------------------setup-planner-llm-------------------------
@@ -467,7 +488,10 @@ class GptController(Node):
 
         #-----------------------connected-chain------------------------ 
         #this the the langchain llm chain staring with the planner llm which is parsed to the agent llm 
-        self.chain = model | StrOutputParser() | self.save_llm_output  | agent.run | StrOutputParser() | self.save_llm_output
+        #self.chain = model | StrOutputParser() | self.save_llm_output  | agent.run | StrOutputParser() | self.save_llm_output
+        
+        #test new chain 
+        self.chain =  agent.run | StrOutputParser() | self.save_llm_output
     
     
     
