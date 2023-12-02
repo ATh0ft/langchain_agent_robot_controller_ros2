@@ -428,7 +428,6 @@ class GptController(Node):
         #finaly defining the agent llm 
 
         agent_kwargs = {
-            "system_message": system_message_agent,
             "extra_prompt_messages": [MessagesPlaceholder(variable_name="memory")],
         }
 
@@ -439,10 +438,12 @@ class GptController(Node):
         )
 
 
-        agent = initialize_agent(tools = tools, 
+        self.agent = initialize_agent(tools = tools, 
                                  llm = llm, 
                                  agent=AgentType.OPENAI_FUNCTIONS, 
                                  verbose=True, 
+                                 max_iterations = 5,
+                                 early_stopping_method = 'generate', 
                                  agent_kwargs=agent_kwargs, 
                                  memory = conversational_memory )
         
@@ -456,7 +457,7 @@ class GptController(Node):
             t = tool
             tools_dict[t.name] = t.description
 
-        agent.from_agent_and_tools
+        #agent.from_agent_and_tools
 
         self.tools_str = json.dumps(tools_dict)
 
@@ -491,7 +492,7 @@ class GptController(Node):
         #self.chain = model | StrOutputParser() | self.save_llm_output  | agent.run | StrOutputParser() | self.save_llm_output
         
         #test new chain 
-        self.chain =  agent.run | StrOutputParser() | self.save_llm_output
+        self.chain =  self.agent.run #| StrOutputParser() | self.save_llm_output
     
     
     
@@ -523,8 +524,9 @@ class GptController(Node):
 
 
         self.get_logger().info("invoking chain")
-        msg_to_llm_chain = self.chat_template.format_messages(function_list = self.tools_str, task = request)
-        result = self.chain.invoke(msg_to_llm_chain)
+        #msg_to_llm_chain = self.chat_template.format_messages(function_list = self.tools_str, task = request)
+        #result = self.chain.invoke(msg_to_llm_chain)
+        result = self.agent.run(f"{request.user_input}")
         response.success = True
         response.msg = result
             
