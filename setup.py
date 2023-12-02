@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'creat_new_chat = langchain_agent_robot_controller_ros2.gpt_controller:main'
+            'create_new_chat = langchain_agent_robot_controller_ros2.gpt_controller:main'
         ],
     },
 )
