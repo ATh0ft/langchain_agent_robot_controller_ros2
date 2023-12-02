@@ -486,8 +486,8 @@ class GptController(Node):
                                  llm = llm, 
                                  agent=AgentType.OPENAI_FUNCTIONS, 
                                  verbose=True, 
-                                 max_iterations = 5,
-                                 early_stopping_method = 'generate', 
+                                 #max_iterations = 5,
+                                 #early_stopping_method = 'generate', 
                                  agent_kwargs=agent_kwargs, 
                                  memory = conversational_memory )
         
@@ -504,27 +504,6 @@ class GptController(Node):
         #agent.from_agent_and_tools
 
         self.tools_str = json.dumps(tools_dict)
-
-        #creating the prompt templates 
-        system_message_planner = """You are a helpful assistant that creates a detailed plan but with as few steps as possible for a robot to follow to solve the task given by the user.
-        To solve the task, tools from this list can be used:
-        {function_list}
-        Return only the plan as a step-by-step manual for the robot operator to follow.
-        Do not return anything but the steps to follow"""
-
-
-        user_template = """{task}"""
-
-        #defining the prompt template 
-        self.chat_template = ChatPromptTemplate.from_messages(
-            [
-                ("system", system_message_planner),
-                ("human", user_template),
-            ]
-        )
-
-        #defining the modle to use for the planner llm 
-        model = ChatOpenAI(model_name="gpt-4-1106-preview")
 
     
         self.llm_outputs = {'planner':None, 'agent':None} #dictionary to store the outputs
@@ -570,7 +549,7 @@ class GptController(Node):
         self.get_logger().info("invoking chain")
         #msg_to_llm_chain = self.chat_template.format_messages(function_list = self.tools_str, task = request)
         #result = self.chain.invoke(msg_to_llm_chain)
-        result = self.agent.run(f"{request.user_input}")
+        result = self.agent.run(f"Create a plan to {request.user_input}, then excute the plan")
         response.success = True
         response.msg = result
             
