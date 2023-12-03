@@ -276,6 +276,49 @@ class GraspObjectTool(BaseTool):
     args_schema: Type[BaseModel] = GraspObjectInput
     def _run(self,side,object_position, grasp_orientation):
         return grasp_object(side=side,object_position=object_position, grasp_orientation=grasp_orientation)
+
+class LLMPlanningInput(BaseModel):
+    """input to use_llm_to_plan"""
+    task:str = Field(description="The task provided by the user")
+
+
+
+
+class LLMPlanningTool(BaseTool):
+    name = 'use_llm_to_plan'
+    description = "Useful for when the task needs to be solved using multiple steps. \nOutputs a more detaild plan to follow"
+    args_schema: Type[BaseModel] = LLMPlanningInput
+    def _run(self, task):
+        system_message_planner = """You are a helpful assistant that creates a detailed plan but with as few steps as possible for a robot to follow to solve the task given by the user.
+To solve the task, tools from this list can be used:
+Use "move_single_arm" to move a single arm's end effector to specified coordinates and orientation.
+Use "move_both_arms" to move both arms to their respective coordinates and end effector orientations (ensuring they are not at the same position).
+Use "use_gripper" to open or close the gripper as needed.
+Utilize "get_item_dict" to identify objects in the workspace and their locations.
+Use "get_full_robot_pose" to retrieve the current pose of the robot, including arm positions, orientations, and gripper states.
+Use "grasp_object" to grasp an object with a single robot arm. This tool does all the grasping for you.
+Always refer to the grasp_object when grasping or picking up and object and ensure that the other arm than the grasping one is out of the way.
+"""
+    
+        user_template = """Create a plan to {task} using only 200 characters."""
+
+        #defining the prompt template 
+        chat_template = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_message_planner),
+                ("human", user_template),
+            ]
+        )
+        model = ChatOpenAI(
+            temperature=0,
+            model_name='gpt-3.5-turbo'
+        )
+        msg = chat_template.format_messages(task = task)
+
+        return model(msg)
+
+
+
 #------------------------end of llm tools-----------------------------
 
 
@@ -424,7 +467,8 @@ class GptController(Node):
                  GetFullRobotPoseTool(), 
                  #GetPreGraspPoseTool(), 
                  #GetGraspPoseTool(),
-                 GraspObjectTool()]
+                 GraspObjectTool(),
+                 LLMPlanningTool()]
         #finaly defining the agent llm 
 
         agent_kwargs = {
