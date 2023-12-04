@@ -392,7 +392,7 @@ class Subscriber(Node):
         super().__init__('subscriber')
         
         self._item_dict_sub  = self.create_subscription(String, 
-                                                        '/item_dict', 
+                                                        '/yolo/prediction/item_dict', 
                                                         self.item_dict_callback,
                                                         qos_profile_sensor_data)
 
