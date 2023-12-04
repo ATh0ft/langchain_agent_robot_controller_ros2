@@ -292,7 +292,7 @@ class LLMPlanningTool(BaseTool):
     def _run(self, task):
         system_message_planner = """You are a helpful assistant that creates a detailed plan but with as few steps as possible for a robot to follow to solve the task given by the user.
 To solve the task, tools from this list can be used:
-Use "move_single_arm" to move a single arm's end effector to specified coordinates and orientation.
+Use "move_single_arm" to move a single arm's end effector to specified coordinates and orientation if no orientation is specified use the current orientation. 
 Use "move_both_arms" to move both arms to their respective coordinates and end effector orientations (ensuring they are not at the same position).
 Use "use_gripper" to open or close the gripper as needed.
 Utilize "get_item_dict" to identify objects in the workspace and their locations.
