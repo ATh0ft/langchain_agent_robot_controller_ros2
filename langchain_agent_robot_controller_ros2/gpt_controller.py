@@ -447,11 +447,13 @@ class Subscriber(Node):
         
     
     def gripper_state_callback(self, msg):
+        #self.get_logger().info(f"{msg.g_pra}")
         global robot_full_pose
         gripper_pos = msg.g_pra
         
         if gripper_pos > 20: robot_full_pose['step_1']['left_gripper_state'] = True
         else: robot_full_pose['step_1']['left_gripper_state'] = False
+        #self.get_logger().warn(f"new gripper state {robot_full_pose['step_1']['left_gripper_state']}")
         
 
 
@@ -508,45 +510,10 @@ class GptController(Node):
                                  agent_kwargs=agent_kwargs, 
                                  memory = conversational_memory )
         
-        
-        #-----------------------------setup-planner-llm-------------------------
-        
-        #creating a string containing information about the tools used by the agent 
-        tools_dict = {}
-
-        for tool in tools:
-            t = tool
-            tools_dict[t.name] = t.description
-
-        #agent.from_agent_and_tools
-
-        self.tools_str = json.dumps(tools_dict)
-
-    
-        self.llm_outputs = {'planner':None, 'agent':None} #dictionary to store the outputs
-
-        
-
-        #-----------------------connected-chain------------------------ 
-        #this the the langchain llm chain staring with the planner llm which is parsed to the agent llm 
-        #self.chain = model | StrOutputParser() | self.save_llm_output  | agent.run | StrOutputParser() | self.save_llm_output
-        
-        #test new chain 
-        self.chain =  self.agent.run #| StrOutputParser() | self.save_llm_output
     
     
-    
-    def save_llm_output(self, llm_output):
-        if self.llm_outputs['planner'] == None:
-            self.llm_outputs['planner'] = llm_output
-            
-        else:
-            self.llm_outputs['agent'] = llm_output  
-        
-        with open('llm_output.json','w') as f:
-            json.dump(self.llm_outputs, f, indent=4)
-        
-        return llm_output
+    def save_llm_output(self):
+        memory = self.agent.memory
 
 
     #--------------------------send-request-to-pose-commander-and-await-response------------------------
@@ -561,12 +528,8 @@ class GptController(Node):
     def user_input_callback(self, request, response):
         self.get_logger().info("using the callback")
         self.get_logger().info(f"recieved msg from user: {request.user_input}")
-
-
         self.get_logger().info("invoking chain")
-        #msg_to_llm_chain = self.chat_template.format_messages(function_list = self.tools_str, task = request)
-        #result = self.chain.invoke(msg_to_llm_chain)
-        result = self.agent.run(f"Create a plan to {request.user_input}, then excute the plan")
+        result = self.agent.run(f"{request.user_input}")
         response.success = True
         response.msg = result
             
