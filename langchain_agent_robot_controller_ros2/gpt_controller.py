@@ -16,6 +16,7 @@ from geometry_msgs.msg import Pose
 from custom_interfaces.srv import BimanualJson
 from custom_interfaces.srv import UserInput
 from robotiq_3f_gripper_ros2_interfaces.srv import Robotiq3FGripperOutputService
+from robotiq_3f_gripper_ros2_interfaces.msg import Robotiq3FGripperInputRegisters
 
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 
@@ -392,7 +393,8 @@ class Subscriber(Node):
         
         self._item_dict_sub  = self.create_subscription(String, 
                                                         '/item_dict', 
-                                                        self.item_dict_callback,qos_profile_sensor_data)
+                                                        self.item_dict_callback,
+                                                        qos_profile_sensor_data)
 
         
         self._right_robot_position_sub= self.create_subscription(Pose, 
@@ -404,6 +406,12 @@ class Subscriber(Node):
                                                                  '/left_state_pose', 
                                                                  self.left_robot_position_callback,
                                                                  qos_profile_sensor_data)
+        
+        self._gripper_state_sub = self.create_subscription(Robotiq3FGripperInputRegisters,
+                                                           '/Robotiq3FGripper/InputRegisters',
+                                                           self.gripper_state_callback,
+                                                           qos_profile_sensor_data)
+        
     def item_dict_callback(self, msg):
         #self.get_logger().info(f"item dict recived with length {len(msg.data)}")
         self.item_dict = msg.data
@@ -436,6 +444,15 @@ class Subscriber(Node):
                                                              msg.orientation.z,
                                                              msg.orientation.w]
         #self.get_logger().info(f"left robot pose recieved, new ee pos {robot_full_pose['step_1']['left_ee_coor']}")
+        
+    
+    def gripper_state_callback(self, msg):
+        global robot_full_pose
+        gripper_pos = msg.g_pra
+        
+        if gripper_pos > 20: robot_full_pose['step_1']['left_gripper_state'] = True
+        else: robot_full_pose['step_1']['left_gripper_state'] = False
+        
 
 
 class GptController(Node):
