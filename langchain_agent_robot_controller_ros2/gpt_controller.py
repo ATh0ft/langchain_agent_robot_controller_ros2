@@ -62,7 +62,7 @@ def send_pose_to_robots(pose: dict):
     
     pose_str = json.dumps(pose)
     planner_client = PlannerClient()
-    planner_client.get_logger().info(f"sending pose str: {pose_str}")
+    #planner_client.get_logger().info(f"sending pose str: {pose_str}")
     result = planner_client.send_request(pose_str)
     planner_client.destroy_node()
     return result
@@ -96,7 +96,7 @@ def move_both_arms(left_coordinates, left_orientation, right_coordinates, right_
 def use_gripper(side, state):
     if side == 'left':
         gripper_client = GripperClient()
-        gripper_client.get_logger().info("activating left gripper")
+        #gripper_client.get_logger().info("activating left gripper")
         gripper_client.send_request(state)
         gripper_client.destroy_node()
 
@@ -176,7 +176,7 @@ class MoveBothArmsInput(BaseModel):
 class MoveBothArmsTool(BaseTool):
     name = "move_both_arms"
     description = """
-        Usefull for when you want to move both arms to each their coordinates and end effector orientation. Note that both arms must not be at the same position.
+        Useful for when you want to move both arms to each their coordinates and end effector orientation. Note that both arms must not be at the same position.
         Outputs a list where the first value is whether or not the move was a success and the second value is the error message"""
     args_schema: Type[BaseModel] = MoveBothArmsInput
     def _run(self,left_coordinates, left_orientation, right_coordinates, right_orientation):
@@ -191,7 +191,7 @@ class UseGripperInput(BaseModel):
 class UseGripperTool(BaseTool):
     name = "use_gripper"
     description = """
-        Usefull for when you want to open or close a gripper.
+        Useful for when you want to open or close a gripper.
         Outputs a list where the first value is whether or not the move was a success and the second value is the error message"""
     args_schema: Type[BaseModel] = UseGripperInput
     def _run(self,side,state):
@@ -237,7 +237,7 @@ class GetPreGraspPoseInput(BaseModel):
 class GetPreGraspPoseTool(BaseTool):
     name = "get_pre_grasp_pose"
     description = """
-        Usefull for when you want to find the end effector pose before going to the grasp postition an object.
+        Useful for when you want to find the end effector pose before going to the grasp postition an object.
         Always use this function before grasping an object by moving the arm that you want to use for grasping to the pose outputted by this function to ensure the correct aproach.
         Outputs a dictionary containing the end effecor position ['end_effector_positiom'] and end effector orientation ['end_effector_orientation']
         The end effector position is in the global frame
@@ -254,7 +254,7 @@ class GetGraspPoseInput(BaseModel):
 class GetGraspPoseTool(BaseTool):
     name = "get_grasp_pose"
     description = """
-        Usefull for when you want to find the pose of the end effector to grasp an object 
+        Useful for when you want to find the pose of the end effector to grasp an object 
         Use this after you have moved the arm to the pre grasp pose. Then move the robot to the pose outputted by this tool
         Outputs a dictionary containing the end effecor position ['end_effector_positiom'] and end effector orientation ['end_effector_orientation']
         The end effector position is in the global frame"""
@@ -272,7 +272,8 @@ class GraspObjectInput(BaseModel):
 class GraspObjectTool(BaseTool):
     name = "grasp_object"
     description = """
-        Useful for when you want to grasp or pick up an object using a single robot arm. When using this tool do not change the position of the arm beforehand. As standard use the horizantal grasp unless it is a small object, eg. : the z position < 0.05 .
+        Useful for when you want to grasp or pick up an object using a single robot arm. When using this tool do not change the position of the arm beforehand. As standard use the horizantal grasp unless it is a small object, eg. : the z position < 0.05.
+        This tool executes the following steps: 1. opens the gripper, 2. moves the robot arm to the pre grasp postion, 3. moves the robot arm to the graping position, and 5. closes the gripper around the object.
         Outputs a dictionary containing the response data from each step."""
     args_schema: Type[BaseModel] = GraspObjectInput
     def _run(self,side,object_position, grasp_orientation):
@@ -285,14 +286,16 @@ class LLMPlanningInput(BaseModel):
 
 
 
+
 class LLMPlanningTool(BaseTool):
     name = 'use_llm_to_plan'
     description = "Useful for when the task needs to be solved using multiple steps. \nOutputs a more detaild plan to follow"
     args_schema: Type[BaseModel] = LLMPlanningInput
     def _run(self, task):
+        items = get_item_dict()
         system_message_planner = """You are a helpful assistant that creates a detailed plan but with as few steps as possible for a robot to follow to solve the task given by the user.
 To solve the task, tools from this list can be used:
-Use "move_single_arm" to move a single arm's end effector to specified coordinates and orientation.
+Use "move_single_arm" to move a single arm's end effector to specified coordinates and orientation. Do not use this function before grasping an object. The grasp_object function handles this part of the grasping
 Use "move_both_arms" to move both arms to their respective coordinates and end effector orientations (ensuring they are not at the same position).
 Use "use_gripper" to open or close the gripper as needed.
 Utilize "get_item_dict" to identify objects in the workspace and their locations.
@@ -301,7 +304,7 @@ Use "grasp_object" to grasp an object with a single robot arm. This tool does al
 Always refer to the grasp_object when grasping or picking up and object and ensure that the other arm than the grasping one is out of the way.
 """
     
-        user_template = """Create a plan to {task} using only 200 characters."""
+        user_template = """Create a plan to {task} using only 200 characters. The items avilable in the the workspace are [{items}]"""
 
         #defining the prompt template 
         chat_template = ChatPromptTemplate.from_messages(
@@ -312,9 +315,9 @@ Always refer to the grasp_object when grasping or picking up and object and ensu
         )
         model = ChatOpenAI(
             temperature=0,
-            model_name='gpt-3.5-turbo'
+            model_name="gpt-4-1106-preview"
         )
-        msg = chat_template.format_messages(task = task)
+        msg = chat_template.format_messages(task = task, items = items)
 
         return model(msg)
 
@@ -351,11 +354,11 @@ class GripperClient(Node):
 
         self.future = self.cli.call_async(self.req)
 
-        self.get_logger().info(f"node exec:{self.executor}, future exec:{self.future._executor}")
+        #self.get_logger().info(f"node exec:{self.executor}, future exec:{self.future._executor}")
 
         rclpy.spin_until_future_complete(node=self, future=self.future)
         
-        self.get_logger().info("result recived")
+        #self.get_logger().info("result recived")
         return self.future.result()   
 
 
@@ -378,11 +381,11 @@ class PlannerClient(Node):
         
         self.future = self.cli.call_async(self.req)
 
-        self.get_logger().info(f"node exec:{self.executor}, future exec:{self.future._executor}")
+        #self.get_logger().info(f"node exec:{self.executor}, future exec:{self.future._executor}")
 
         rclpy.spin_until_future_complete(node=self, future=self.future)
         
-        self.get_logger().info("result recived")
+        #self.get_logger().info("result recived")
         return self.future.result()
 
 #-----------------------the gpt controller node----------------------
@@ -476,7 +479,9 @@ class GptController(Node):
         system_message_agent = SystemMessage(content="You are controlling a bimanual robot. Use the tools provided to sovle the users problem or task. To solve the users problem start by breaking the task into smaller steps that you can solve using a single tool call for each step")
 
         #defining the model to ofe with the llm
-        llm = ChatOpenAI(model="gpt-3.5-turbo-1106", temperature=0)
+        #gpt-3.5-turbo-1106
+        #gpt-4-1106-preview
+        llm = ChatOpenAI(model="gpt-4-1106-preview", temperature=0)
 
         #defining the list of tools availble for the agent llm to use 
         tools = [MoveSingleArmTool(), 
@@ -526,9 +531,9 @@ class GptController(Node):
 
     #----------------------------callback-functions------------------------------
     def user_input_callback(self, request, response):
-        self.get_logger().info("using the callback")
-        self.get_logger().info(f"recieved msg from user: {request.user_input}")
-        self.get_logger().info("invoking chain")
+        #self.get_logger().info("using the callback")
+        #self.get_logger().info(f"recieved msg from user: {request.user_input}")
+        #self.get_logger().info("invoking chain")
         result = self.agent.run(f"{request.user_input}")
         response.success = True
         response.msg = result
