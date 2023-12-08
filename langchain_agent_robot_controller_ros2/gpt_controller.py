@@ -159,6 +159,7 @@ class MoveSingleArmTool(BaseTool):
     description = """
         Useful for when you want to move a single arms end effector to a set of coordinates and a given orientation. 
         When using this tool use the current orientation of the end effecter.
+        If used after grasp_object you should first get_full_robot_pose and use that orientation of the end effector.
         Do not use this tool to move the arm into a grasping position. Just use the grasp_object tool for this.
         Outputs a list where the first value is whether or not the move was a success and the second value is the error message"""
     args_schema: Type[BaseModel] = MoveSingleArmInput
