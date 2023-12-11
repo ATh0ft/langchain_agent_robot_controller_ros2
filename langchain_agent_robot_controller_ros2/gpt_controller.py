@@ -347,7 +347,7 @@ class GripperClient(Node):
         self.req.output_registers.r_gto = 1 #must be 1 
         self.req.output_registers.r_atr = 0 # must be 0 
         self.req.output_registers.r_spa = 128 #speed must be between 0 and 255
-        self.req.output_registers.r_fra = 10 #force must be between 0 and 255
+        self.req.output_registers.r_fra = 128 #force must be between 0 and 255
 
         if state:
             self.req.output_registers.r_pra = 255 #position 0 = open 255 closed 
