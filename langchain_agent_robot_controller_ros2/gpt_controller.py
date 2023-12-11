@@ -517,6 +517,7 @@ class GptController(Node):
                                  #max_iterations = 5,
                                  #early_stopping_method = 'generate', 
                                  #agent_kwargs=agent_kwargs, 
+                                 return_intermediate_steps = True,
                                  memory = mem )
         
         self.runs = 0
@@ -538,14 +539,14 @@ class GptController(Node):
         #self.get_logger().info("using the callback")
         #self.get_logger().info(f"recieved msg from user: {request.user_input}")
         #self.get_logger().info("invoking chain")
-        result = self.agent.run(f"{request.user_input}")
+        result = self.agent.__call__({"input":f"{request.user_input}"})
         response.success = True
-        response.msg = result
+        response.msg = str(result)
         run_data = self.agent.memory.buffer
         with open("test_data.txt", "a") as f :
             f.write(str(run_data))
             self.runs += 1 
-            f.write(str(self.runs))
+            f.write("\n###\n")
         
         self.agent.memory.clear()
 
