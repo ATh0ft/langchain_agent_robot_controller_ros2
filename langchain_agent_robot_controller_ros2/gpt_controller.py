@@ -30,6 +30,7 @@ from langchain.schema import SystemMessage
 from langchain.agents import AgentType, initialize_agent
 from langchain.chat_models import ChatOpenAI
 
+from langchain.agents.openai_functions_agent.agent_token_buffer_memory import AgentTokenBufferMemory
 from langchain.chains.conversation.memory import ConversationBufferWindowMemory
 from langchain.prompts import MessagesPlaceholder
 
@@ -507,6 +508,7 @@ class GptController(Node):
             return_messages=True
         )
 
+        mem = AgentTokenBufferMemory(llm= llm)
 
         self.agent = initialize_agent(tools = tools, 
                                  llm = llm, 
@@ -514,10 +516,10 @@ class GptController(Node):
                                  verbose=True, 
                                  #max_iterations = 5,
                                  #early_stopping_method = 'generate', 
-                                 agent_kwargs=agent_kwargs, 
-                                 memory = conversational_memory )
+                                 #agent_kwargs=agent_kwargs, 
+                                 memory = mem )
         
-    
+        self.runs = 0
     
     def save_llm_output(self):
         memory = self.agent.memory
@@ -539,6 +541,14 @@ class GptController(Node):
         result = self.agent.run(f"{request.user_input}")
         response.success = True
         response.msg = result
+        run_data = self.agent.memory.buffer
+        with open("test_data.txt", "a") as f :
+            f.write(str(run_data))
+            self.runs += 1 
+            f.write(str(self.runs))
+        
+        self.agent.memory.clear()
+
             
 
         return response 
